@@ -1,0 +1,432 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jan  18th 2021
+@author: Lewin Scholz
+
+Testprogramm für Jugend forscht
+
+Ein Künstliches Neuronales Netz, dass durch parallele Gewichtsmodifikation lernt
+
+P A R A L L E L E    O P T I M I E R U N G
+
+"""
+
+#%% Importe
+import matplotlib.pyplot as plt
+import numpy as np
+import random
+
+#%% Definition des XOR-Problems
+# [x-Koordinate, y-Koordinate, Klasse]
+xor = [[1, 1, 1], [4, 4, 1], [4, 1, 0], [1, 4, 0]]
+
+# für die graphische Ausgabe
+y = [] # Enthält die Summe der erfolgreichen Optimierungsdurchläufe
+
+#%% Main-Methode
+def run():
+    # für die graphische Ausgabe
+    correct = 0
+    false = 0
+    # Anzahl der Evaluationen
+    v = 0
+    maxitnum = 4000 # MAXimum ITeration NUMber, maximale Anzahl der Optimierungsschritte für alle Gewichte
+    t = 0
+    #%% Evaluationsprozess
+    while v < 1000: # 1000 Evaluationen
+        
+        #%% zufällige Gewichtsinitialisierung
+        # Matrizen mit zufälligen zwischen 1 und 0 Werten erstellen
+        m1 = np.random.rand(3, 2) # G1 und G2
+        m2 = np.random.rand(1, 3) # G3
+        # negative Vorzeichen hinzufügen
+        def changeSignsM1():
+            i = 0 # iteration
+            c = 0 # column - Spalte
+            l = 0 # line - Zeile
+            while i < 6:
+                m1[c, l] = m1[c, l] * ([-1,1][random.randrange(2)])
+                c = c + 1
+                if c == 3:
+                    l = l + 1
+                    c = 0
+                i = i + 1
+        def changeSignsM2():
+            i = 0 # iteration
+            l = 0 # lines
+            while i < 3:
+                m2[0, l] = m2[0, l] * ([-1,1][random.randrange(2)])
+                l = l + 1
+                i = i + 1
+        # uniforme Vorzeichenverteilungen ausschließen
+        while abs(m1[0,0]) == m1[0,0] and abs(m1[1,0]) == m1[1,0] and abs(m1[2,0]) == m1[2,0] or abs(m1[0,0]) != m1[0,0] and abs(m1[1,0]) != m1[1,0] and abs(m1[2,0]) != m1[2,0] or abs(m1[0,1]) == m1[0,1] and abs(m1[1,1]) == m1[1,1] and abs(m1[2,1]) == m1[2,1] or abs(m1[0,1]) != m1[0,1] and abs(m1[1,1]) != m1[1,1] and abs(m1[2,1]) != m1[2,1]:
+            changeSignsM1()
+        while abs(m2[0,0]) == m2[0,0] and abs(m2[0,1]) == m2[0,1] and abs(m2[0,2]) == m2[0,2] or abs(m2[0,0]) != m2[0,0] and abs(m2[0,1]) != m2[0,1] and abs(m2[0,2]) != m2[0,2]:
+            changeSignsM2()
+    
+        #%% Heaviside Funktion - übernimmt einen Wert und gibt eine Ausgabe von 1 oder 0 aus
+        def hsf(w):
+            if w > 0:
+                return 1
+            if w < 0:
+                return 0
+        
+        #%% Klassifikation eines Datenpunktes
+        def classify(x, y, gx, gy, bias):
+            sum = x * gx + y * gy + bias
+            output = hsf(sum)
+            return output
+        
+        #%% Variablendefinition
+        t = 0 # Anzahl der korrekt klassifizierten Datenpunkte
+        ic = 0 # iteration count - Anzahl an Iterationen
+        # Fitness Of Last Iteration - Fitness der letztes Iteration
+        foli1 = 0 # G1
+        foli2 = 0 # G2
+        foli3 = 0 # G3
+        # Direction Of Change - Änderungsrichtung
+        dof1 = True
+        dof2 = True
+        dof3 = True
+        # Gewichtänderungsparameter
+        u = 0.1 # up
+        d = 0.1 # down
+        
+        #%% Trainingsprozess:
+        while ic < maxitnum: 
+            
+            # Variablen zurücksetzen
+            t = 0
+            # Fitness
+            f1 = 0
+            f2 = 0
+            f3 = 0
+            # Anzahl der falsch klassifizierten Knoten
+            fn1 = 0 
+            fn2 = 0 
+            fn3 = 0 
+            # Datenpunktgruppen
+            g1ANDg2 = [] # 1 und 1
+            g1XOR = [] # 1 und 0
+            g2XOR = [] # 0 und 1
+            neither = [] # 0 und 0
+            # um die Klasse einer Gruppe zu identifizieren
+            andClass = 0
+            g1Class = 0
+            g2Class = 0
+            notClass = 0
+            # Daten der 2. Schicht
+            data2 = []
+            
+            #%% Klassifikation
+            for i in xor:
+                sumG1 = m1[0, 0] * i[0] + m1[1, 0] * i[1] + m1[2, 0] # gewichtete Summe von G1 + bias
+                sumG2 = m1[0, 1] * i[0] + m1[1, 1] * i[1] + m1[2, 1] # gewichtete Summe von G2 + bias
+                output = hsf(hsf(sumG1) * m2[0, 0] + hsf(sumG2) * m2[0, 1] + m2[0, 2]) # Klassifikation
+                    
+                # Wenn der Datenpunkt auf dem Klassifikationsgraphen liegt
+                if sumG1 == 0 or sumG2 == 0:
+                    output = -1 # keine Klassifikationsausgabe möglich
+                
+                if output == i[2]: # Klassifikation korrekt
+                    t = t + 1    
+            if t == 4: # beende den Trainingsprozess, wenn die Klassifikation für jeden Datenpunkt korrekt ist
+                break
+            
+            #%% G1 Klassifikation & Fitness
+            for i in xor:
+                if classify(i[0], i[1], m1[0, 0], m1[1, 0], m1[2, 0]) != i[2]: # falsche Klassifikation
+                    f1 = f1 + abs(i[1] - ((-1)*(m1[0, 0] / m1[1, 0]) * i[0] + ((-1)*(m1[2, 0] / m1[1, 0]))))
+                    fn1 = fn1 + 1
+                    
+            f1 = f1 * fn1
+            
+            # Feedback
+            if ic == 0: # zufällige Gewichtsänderung in erster Iteration
+                # zufällige Gewichtswahl
+                r1 = random.choice([0,2])
+                # zufällige Gewichtsänderung
+                if random.random() < 0.5:
+                    m1[r1, 0] = m1[r1, 0] + u
+                    dof1 = True
+                else:
+                    m1[r1, 0] = m1[r1, 0] + d
+                    dof1 = False
+                # Fitness für die nächste Iteration sichern
+                foli1 = f1
+            else:
+                # Berechne Fitnesschange
+                # negativer Wert -> Verschlechterung der Fitness
+                # positiver Wert -> Verbesserung der Fitness
+                fc1 = foli1 - f1
+                # Fitness für die nächste Iteration sichern
+                foli1 = f1
+                
+                # Feedbackantwort
+                if fc1 > 0: # positiv - Änderungsrichtung folgen
+                    if dof1 == True:
+                        m1[r1, 0] = m1[r1, 0] + u
+                    else:
+                        m1[r1, 0] = m1[r1, 0] - d
+                if fc1 < 0: # negativ - Änderungsrichtung umkehren
+                    dof1 ^= True
+                    if dof1 == True:
+                        m1[r1, 0] = m1[r1, 0] + u
+                    else:
+                        m1[r1, 0] = m1[r1, 0] - d
+                    # Chance auf zufällige Gewichtswahl
+                    if random.random() < 0.8:
+                        r1 = random.choice([0,2])
+                    # sonst Vorzeichenwechsel
+                    else:
+                        m1[0, 0] = m1[0, 0]*([-1,1][random.randrange(2)])
+                        m1[1, 0] = m1[1, 0]*([-1,1][random.randrange(2)])
+                        m1[2, 0] = m1[2, 0]*([-1,1][random.randrange(2)])
+                        # Uniformitätsausschluss
+                        while abs(m1[0,0]) == m1[0,0] and abs(m1[1,0]) == m1[1,0] and abs(m1[2,0]) == m1[2,0] or abs(m1[0,0]) != m1[0,0] and abs(m1[1,0]) != m1[1,0] and abs(m1[2,0]) != m1[2,0]:
+                            m1[0, 0] = m1[0, 0]*([-1,1][random.randrange(2)])
+                            m1[1, 0] = m1[1, 0]*([-1,1][random.randrange(2)])
+                            m1[2, 0] = m1[2, 0]*([-1,1][random.randrange(2)])
+                if round(fc1, 3) == 0: # zufällig - zufällige Änderung
+                    if random.random() < 0.5:
+                        m1[r1, 0] = m1[r1, 0] + random.random()
+                        dof1 = True
+                    else:
+                        m1[r1, 0] = m1[r1, 0] - random.random()
+                        dof1 = False
+            
+            # Klassifikation
+            t = 0
+            for i in xor:
+                sumG1 = m1[0, 0] * i[0] + m1[1, 0] * i[1] + m1[2, 0] # gewichtete Summe von G1 + bias
+                sumG2 = m1[0, 1] * i[0] + m1[1, 1] * i[1] + m1[2, 1] # gewichtete Summe von G2 + bias
+                output = hsf(hsf(sumG1) * m2[0, 0] + hsf(sumG2) * m2[0, 1] + m2[0, 2]) # Klassifikation
+                    
+                # Wenn der Datenpunkt auf dem Klassifikationsgraphen liegt
+                if sumG1 == 0 or sumG2 == 0:
+                    output = -1 # keine Klassifikationsausgabe möglich
+                
+                if output == i[2]: # Klassifikation korrekt
+                    t = t + 1    
+            if t == 4: # beende den Trainingsprozess, wenn die Klassifikation für jeden Datenpunkt korrekt ist
+                break
+            
+            #%% G2 Klassifikation & Fitness
+            for i in xor:
+                if classify(i[0], i[1], m1[0, 1], m1[1, 1], m1[2, 1]) != i[2]: # falsche Klassifikation
+                    f2 = f2 + abs(i[1] - ((-1)*(m1[0, 1] / m1[1, 1]) * i[0] + ((-1)*(m1[2, 1] / m1[1, 1]))))
+                    fn2 = fn2 + 1
+            
+            f2 = f2 * fn2
+            
+            # Feedback
+            if ic == 0: # zufällige Gewichtsänderung in erster Iteration
+                # zufällige Gewichtswahl
+                r2 = random.choice([0,2])
+                # zufällige Gewichtsänderung
+                if random.random() < 0.5:
+                    m1[r2, 1] = m1[r2, 1] + u
+                    dof2 = True
+                else:
+                    m1[r2, 1] = m1[r2, 1] + d
+                    dof2 = False
+                # Fitness für die nächste Iteration sichern
+                foli2 = f2
+            else:
+                # Berechne Fitnesschange
+                # negativer Wert -> Verschlechterung der Fitness
+                # positiver Wert -> Verbesserung der Fitness
+                fc2 = foli2 - f2
+                # Fitness für die nächste Iteration sichern
+                foli2 = f2
+                
+                # Feedbackantwort
+                if fc2 > 0: # positiv - Änderungsrichtung folgen
+                    if dof2 == True:
+                        m1[r2, 1] = m1[r2, 1] + u
+                    else:
+                        m1[r2, 1] = m1[r2, 1] - d
+                if fc2 < 0: # negativ - Änderungsrichtung umkehren
+                    dof2 ^= True
+                    if dof2 == True:
+                        m1[r2, 1] = m1[r2, 1] + u
+                    else:
+                        m1[r2, 1] = m1[r2, 1] - d
+                    # Chance auf zufällige Gewichtswahl
+                    if random.random() < 0.8:
+                        r2 = random.choice([0,2])
+                    # Vorzeichenwechsel
+                    else:
+                        m1[0, 1] = m1[0, 1]*([-1,1][random.randrange(2)])
+                        m1[1, 1] = m1[1, 1]*([-1,1][random.randrange(2)])
+                        m1[2, 1] = m1[2, 1]*([-1,1][random.randrange(2)])
+                        # Uniformitätsausschluss
+                        while abs(m1[0,1]) == m1[0,1] and abs(m1[1,1]) == m1[1,1] and abs(m1[2,1]) == m1[2,1] or abs(m1[0,1]) != m1[0,1] and abs(m1[1,1]) != m1[1,1] and abs(m1[2,1]) != m1[2,1]:
+                            m1[0, 1] = m1[0, 1]*([-1,1][random.randrange(2)])
+                            m1[1, 1] = m1[1, 1]*([-1,1][random.randrange(2)])
+                            m1[2, 1] = m1[2, 1]*([-1,1][random.randrange(2)])
+                if round(fc2, 3) == 0: # zufällig - zufällige Änderung
+                    if random.random() < 0.5:
+                        m1[r2, 1] = m1[r2, 1] + random.random()
+                        dof2 = True
+                    else:
+                        m1[r2, 1] = m1[r2, 1] - random.random()
+                        dof2 = False
+            
+            # Klassifikation
+            t = 0
+            for i in xor:
+                sumG1 = m1[0, 0] * i[0] + m1[1, 0] * i[1] + m1[2, 0] # gewichtete Summe von G1 + bias
+                sumG2 = m1[0, 1] * i[0] + m1[1, 1] * i[1] + m1[2, 1] # gewichtete Summe von G2 + bias
+                output = hsf(hsf(sumG1) * m2[0, 0] + hsf(sumG2) * m2[0, 1] + m2[0, 2]) # Klassifikation
+                    
+                # Wenn der Datenpunkt auf dem Klassifikationsgraphen liegt
+                if sumG1 == 0 or sumG2 == 0:
+                    output = -1 # keine Klassifikationsausgabe möglich
+                
+                if output == i[2]: # Klassifikation korrekt
+                    t = t + 1    
+            if t == 4: # beende den Trainingsprozess, wenn die Klassifikation für jeden Datenpunkt korrekt ist
+                break
+            
+            #%% G3
+            # Gruppierung von Daten aus der 1. Schicht
+            for i in xor:
+                if classify(i[0], i[1], m1[0, 0], m1[1, 0], m1[2, 0]) == 0: # G1 - 0
+                    if classify(i[0], i[1], m1[0, 1], m1[1, 1], m1[2, 1]) == 0: # G2 - 0
+                        neither.append(i)
+                        if i[2] == 1: # 1 output
+                            notClass += 1
+                        elif i[2] == 0: # 0 output
+                            notClass -= 1
+                    elif classify(i[0], i[1], m1[0, 1], m1[1, 1], m1[2, 1]) == 1: # G2 - 1
+                        g2XOR.append(i)
+                        if i[2] == 1: # 1 output
+                            g2Class += 1
+                        elif i[2] == 0: # 0 output
+                            g2Class -= 1
+                elif classify(i[0], i[1], m1[0, 0], m1[1, 0], m1[2, 0]) == 1: # G1 - 1
+                    if classify(i[0], i[1], m1[0, 1], m1[1, 1], m1[2, 1]) == 1: # G2 - 1
+                        g1ANDg2.append(i)
+                        if i[2] == 1: # 1 output
+                            andClass += 1
+                        elif i[2] == 0: # 0 output
+                            andClass -= 1
+                    elif classify(i[0], i[1], m1[0, 1], m1[1, 1], m1[2, 1]) == 0: # G2 - 0
+                        g1XOR.append(i)
+                        if i[2] == 1: # 1 output
+                            g1Class += 1
+                        elif i[2] == 0: # 0 output
+                            g1Class -= 1
+            # Jeder Gruppe an Datenpunkten eine Klasse zuweisen - bestimmt durch die Klasse der Datenpunkte darin
+            if andClass > 0:
+                data2.append([1,1,1])
+            elif andClass < 0:
+                data2.append([1,1,0])
+            if g1Class > 0:
+                data2.append([1,0,1])
+            elif g1Class < 0:
+                data2.append([1,0,0])
+            if g2Class > 0:
+                data2.append([0,1,1])
+            elif g2Class < 0:
+                data2.append([0,1,0])
+            if notClass > 0:
+                data2.append([0,0,1])
+            elif notClass < 0:
+                data2.append([0,0,0])
+            
+            # Klassifikation und Fitness
+            for i in data2:
+                if classify(i[0], i[1], m2[0, 0], m2[0, 1], m2[0, 2]) != i[2]: # falsche Klassifikation
+                    f3 = f3 + abs(i[1] - ((-1)*(m2[0, 0] / m2[0, 1]) * i[0] + ((-1)*(m2[0, 2] / m2[0, 1]))))
+                    fn3 = fn3 + 1
+                    
+            f3 = f3 * fn3
+                            
+            # Feedback
+            if ic == 0: # zufällige Gewichtsänderung in erster Iteration
+                # zufällige Gewichtswahl
+                r3 = random.choice([0,2])
+                # zufällige Gewichtsänderung
+                if random.random() < 0.5:
+                    m2[0, r3] = m2[0, r3] + u
+                    dof3 = True
+                else:
+                    m2[0, r3] = m2[0, r3] + d
+                    dof3 = False
+                # Fitness für die nächste Iteration sichern
+                foli3 = f3
+            else:
+                # Berechne Fitnesschange
+                # negativer Wert -> Verschlechterung der Fitness
+                # positiver Wert -> Verbesserung der Fitness
+                fc3 = foli3 - f3
+                # Fitness für die nächste Iteration sichern
+                foli3 = f3
+                
+                # Feedbackantwort
+                if fc3 > 0: # positiv - Änderungsrichtung folgen
+                    if dof3 == True:
+                        m2[0, r3] = m2[0, r3] + u
+                    else:
+                        m2[0, r3] = m2[0, r3] - d
+                if fc3 < 0: # negativ - Änderungsrichtung umkehren
+                    dof3 ^= True
+                    if dof3 == True:
+                        m2[0, r3] = m2[0, r3] + u
+                    else:
+                        m2[0, r3] = m2[0, r3] - d
+                    # Chance auf zufällige Gewichtswahl
+                    if random.random() < 0.8:
+                        r3 = random.choice([0,2])                                
+                    # Vorzeichenwechsel
+                    else:
+                        m2[0, 0] = m2[0, 0]*([-1,1][random.randrange(2)])
+                        m2[0, 1] = m2[0, 1]*([-1,1][random.randrange(2)])
+                        m2[0, 2] = m2[0, 2]*([-1,1][random.randrange(2)])
+                        # Uniformitätsausschluss
+                        while abs(m2[0,0]) == m2[0,0] and abs(m2[0,1]) == m2[0,1] and abs(m2[0,2]) == m2[0,2] or abs(m2[0,0]) != m2[0,0] and abs(m2[0,1]) != m2[0,1] and abs(m2[0,2]) != m2[0,2]:
+                            m2[0, 0] = m2[0, 0]*([-1,1][random.randrange(2)])
+                            m2[0, 1] = m2[0, 1]*([-1,1][random.randrange(2)])
+                            m2[0, 2] = m2[0, 2]*([-1,1][random.randrange(2)])                                
+                if round(fc3, 3) == 0: # zufällig - zufällige Änderung
+                    if random.random() < 0.5:
+                        m2[0, r3] = m2[0, r3] + random.random()
+                        dof3 = True
+                    else:
+                        m2[0, r3] = m2[0, r3] - random.random()
+                        dof3 = False
+            
+            # Iteration ic beended
+            ic = ic + 1
+        
+        # Optimum gefunden?
+        if t == 4:
+            correct += 1
+        if ic == maxitnum:
+            false += 1
+        # Evaluation v beended
+        v += 1
+        # für die graphische Ausgabe
+        if v % 10 == 0: # v/10 y-Werte
+            y.append(correct)
+            #correct = 0 # soll der Graph steigen
+            if v % 100 == 0:
+                #maxitnum = maxitnum + 1 # maximale Iterationzahl erhöhen?
+                print(v/10, "%") # Statusanzeige
+    
+    # graphische Ausgabe
+    x = np.array(range(100))
+    plt.plot(x, y)
+    plt.axis([0, 100, 0, 500]) # Achsenscalen
+    plt.xlabel("Evaluationen")
+    plt.ylabel("Summe korrekter Evaluationen ")
+    plt.title("Leistungsfähigkeit paralleler Optimierung")
+    plt.grid(True)
+    plt.show()
+    
+    print("correct:", correct)
+    print("false:", false)
+
+run()
