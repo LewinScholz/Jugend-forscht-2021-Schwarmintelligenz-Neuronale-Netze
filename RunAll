@@ -1,0 +1,42 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jan 20 2021
+@author: Lewin Scholz
+
+Testprogramm für Jugend forscht
+
+Vergleich der 3 Optimierungsarten
+
+"""
+import Jufo_2021_random as rand
+import Jufo_2021_parallel as parr
+import Jufo_2021_sequentiell as sequ
+import numpy as np
+import matplotlib.pyplot as plt
+
+print("RANDOM...")
+rand.run()
+print("")
+print("PARALLEL...")
+parr.run()
+print("")
+print("SEQUENZIELL...")
+sequ.run()
+
+x = np.array(range(100)) # x
+
+yr = rand.y
+yp = parr.y
+ys = sequ.y
+
+plt.plot(x, yr, color = 'blue', alpha = 0.8)
+plt.plot(x, yp, color = 'red', alpha = 0.8)
+plt.plot(x, ys, color = 'green', alpha = 0.8)
+
+plt.axis([0, 100, 0, 1000]) # scale axis -xmin, xmax, ymin, ymax
+plt.xlabel("Evaluationen (*10)") # names x-axis
+plt.ylabel("Summe korrekter Evaluationen") # names y-axis 
+plt.legend(["zufällig", "parallel", "sequenziell"], loc ="upper left") 
+plt.title("Leistungsfähigkeit der Optimierungsmethoden im Vergleich")
+plt.grid(True) # make grid
+plt.show() # make plot visible
